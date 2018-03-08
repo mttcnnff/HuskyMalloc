@@ -18,6 +18,7 @@ clean:
 	(cd tests && make clean)
 	rm -f valgrind.out stdout.txt stderr.txt *.plist
 	rm -rf *.dSYM
+	rm -rf tests/*.dSYM
 
 
 # CFLAGS := -g -Wall -Werror -std=gnu99

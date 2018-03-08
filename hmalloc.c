@@ -33,7 +33,6 @@ freeblock_make(void* address)
     new->next = NULL;
     return new;
   }
-  printf("Not enough memory for freeblock!\n");
   return NULL;
 }
 
@@ -126,60 +125,6 @@ freelist_checkadj()
   }
 }
 
-// static
-// void 
-// freelist_insert(freeblock** head, void* addition)
-// {
-
-//   freeblock* current = *head;
-//   freeblock* previous = NULL;
-//   freeblock* newblock = NULL;
-
-//   while (current && (void*)current < addition)
-//   {
-//     previous = current;
-//     current = current->next;
-//   }
-
-//   void* previous_memory_end = (void*)previous ? (void*)previous + previous->size : NULL;
-//   void* newblock_memory_begin = addition;
-//   void* newblock_memory_end = addition + *(size_t*)addition;
-//   void* current_memory_begin = (void*)current ? (void*)current : NULL;
-
-//   printf("Prev End: \t%p\nNew Begin: \t%p\nNew End: \t%p\nNext Begin: \t%p\n", previous_memory_end, newblock_memory_begin, newblock_memory_end, current_memory_begin);
-
-//   if (previous_memory_end != newblock_memory_begin && newblock_memory_end != current_memory_begin) {
-//     newblock = freeblock_make(addition);
-//     if (previous)
-//     {
-//       previous->next = newblock;
-//     } else {
-//       *head = newblock;
-//     }
-//     newblock->next = current;
-//   } else {
-//     if (previous_memory_end == newblock_memory_begin) {
-//       size_t prev_new_size = previous->size + *(size_t*)addition;
-//       memcpy(previous, &prev_new_size, sizeof(size_t));
-//       newblock = previous;
-//     }
-
-//     if (newblock_memory_end == current_memory_begin) {
-//       printf("Expand next.\n");
-//       if (newblock) {
-//         //expand newblock
-//         size_t newblock_new_size = newblock->size + current->size;
-//         memcpy(newblock, &newblock_new_size, sizeof(size_t));
-//         freelist_remove(head, current);
-//       } else {
-//         //expand current backward
-//         size_t current_new_size = current->size + *(size_t*)addition;
-//         memcpy(current, &current_new_size, sizeof(size_t));
-//       }
-//     }
-//   }
-// }
-
 static
 void
 freeblock_expand_back(freeblock** block, size_t size) {
@@ -193,8 +138,6 @@ static
 void 
 freelist_insert(freeblock** head, void* addition)
 {
-
-  printf("Inserting: %p -> %p, Size: %zu\n", addition, addition + *(size_t*)addition, *(size_t*)addition);
 
   freeblock* current = *head;
   freeblock* previous = NULL;
@@ -211,7 +154,6 @@ freelist_insert(freeblock** head, void* addition)
   void* newblock_memory_end = addition + *(size_t*)addition;
   void* current_memory_begin = (void*)current ? (void*)current : NULL;
 
-  printf("Prev End: \t%p\nNew Begin: \t%p\nNew End: \t%p\nNext Begin: \t%p\n", previous_memory_end, newblock_memory_begin, newblock_memory_end, current_memory_begin);
 
   if (previous_memory_end != newblock_memory_begin && newblock_memory_end != current_memory_begin) {
     newblock = freeblock_make(addition);
@@ -224,14 +166,12 @@ freelist_insert(freeblock** head, void* addition)
     newblock->next = current;
   } else {
     if (previous_memory_end == newblock_memory_begin) {
-      printf("Expand previous.\n");
       size_t prev_new_size = previous->size + *(size_t*)addition;
       previous->size = prev_new_size;
       newblock = previous;
     } 
 
     if (newblock_memory_end == current_memory_begin) {
-      printf("Expand next.\n");
       if (newblock) {
         //expand newblock
         size_t newblock_new_size = newblock->size + current->size;
@@ -239,15 +179,9 @@ freelist_insert(freeblock** head, void* addition)
         freelist_remove(head, current);
       } else {
         freeblock_expand_back(&current, *(size_t*)addition);
-        //expand current backward
-        // size_t current_new_size = current->size + *(size_t*)addition;
-        // memcpy(current, &current_new_size, sizeof(size_t));
       }
     }
   }
-
-  freelist_print();
-  freelist_checkadj();
 }
 
 static
@@ -262,32 +196,18 @@ freelist_getblock(freeblock** head, size_t size)
   if (current) {
     
     current = freelist_remove(head, current);
-    void* memory = (void*)current;
     size_t leftover = current->size - size;
+    void* memory = (void*)current;
     if (leftover > sizeof(freeblock))
     {
-      memcpy(memory, &leftover, sizeof(size_t));
-      freelist_insert(head, memory);
+      memcpy(memory + size, &leftover, sizeof(size_t));
+      freelist_insert(head, memory + size);
     } else {
       size+=leftover;
       leftover = 0;
     }
-
-    // size_t leftover = PAGE_SIZE - size;
-    // if (leftover > sizeof(freeblock)) {
-    //   //insert leftover into freelist
-    //   memcpy(memory, &leftover, sizeof(size_t));
-    //   freelist_insert(&head, memory);
-    // } else {
-    //   size+=leftover;
-    //   leftover = 0;
-    // }
-    // memcpy(memory + leftover, &size, sizeof(size_t));
-    // return memory + leftover + sizeof(size_t);
-
-    printf("Size of block being returned: %zu\n", size);
-    memcpy(memory + leftover, &size, sizeof(size_t));
-    return memory + leftover;
+    memcpy(memory, &size, sizeof(size_t));
+    return memory;
   } else {
     
     return 0;
@@ -337,55 +257,12 @@ div_up(size_t xx, size_t yy)
 }
 
 
-// void*
-// hmalloc(size_t size)
-// {
-//     void* memory;
-//     stats.chunks_allocated += 1;
-//     size += sizeof(size_t);
-//     printf("Hmallocing: %zu from\n", size);
-//     freelist_print();
-
-//     if (size < PAGE_SIZE) {
-//       memory = freelist_getblock(&head, size);
-
-//       if(memory) {
-//         return memory + sizeof(size_t);
-//       } else {
-//         printf("\n========= NOT ENOUGH MEMORY ON FREELIST! =========\n\n");
-//         stats.pages_mapped += 1;
-//         memory = mmap(0, PAGE_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
-//         size_t leftover = PAGE_SIZE - size;
-//         if (leftover > sizeof(freeblock)) {
-//           //insert leftover into freelist
-//           memcpy(memory + size, &leftover, sizeof(size_t));
-//           freelist_insert(&head, memory + size);
-//         } else {
-//           size+=leftover;
-//         }
-//         memcpy(memory, &size, sizeof(size_t));
-//         return memory + sizeof(size_t);
-//       }
-
-//     } else {
-//       int pages = div_up(size, PAGE_SIZE);
-//       printf("Making %d pages.\n", pages);
-//       size_t new_size = pages*PAGE_SIZE;
-//       stats.pages_mapped += pages;
-//       memory = mmap(0, new_size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
-//       memcpy(memory, &new_size, sizeof(size_t));
-//       return memory + sizeof(size_t);
-//     }
-// }
-
 void*
 hmalloc(size_t size)
 {
     void* memory;
     stats.chunks_allocated += 1;
-    size += sizeof(freeblock);
-    printf("Hmallocing: %zu from\n", size);
-    //freelist_print();
+    size += sizeof(size_t);
 
     if (size < PAGE_SIZE) {
       memory = freelist_getblock(&head, size);
@@ -393,25 +270,22 @@ hmalloc(size_t size)
       if(memory) {
         return memory + sizeof(size_t);
       } else {
-        printf("\n========= NOT ENOUGH MEMORY ON FREELIST! =========\n\n");
         stats.pages_mapped += 1;
         memory = mmap(0, PAGE_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
         size_t leftover = PAGE_SIZE - size;
         if (leftover > sizeof(freeblock)) {
           //insert leftover into freelist
-          memcpy(memory, &leftover, sizeof(size_t));
-          freelist_insert(&head, memory);
+          memcpy(memory + size, &leftover, sizeof(size_t));
+          freelist_insert(&head, memory + size);
         } else {
           size+=leftover;
-          leftover = 0;
         }
-        memcpy(memory + leftover, &size, sizeof(size_t));
-        return memory + leftover + sizeof(size_t);
+        memcpy(memory, &size, sizeof(size_t));
+        return memory + sizeof(size_t);
       }
 
     } else {
       int pages = div_up(size, PAGE_SIZE);
-      printf("Making %d pages.\n", pages);
       size_t new_size = pages*PAGE_SIZE;
       stats.pages_mapped += pages;
       memory = mmap(0, new_size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
@@ -441,10 +315,6 @@ hfree(void* item)
       stats.pages_unmapped += pages;
       munmap(chunk_to_free, size);
     }
-
-    //freelist_print();
-
-    // TODO: Actually free the item.
 }
 
 size_t 
