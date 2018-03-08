@@ -11,6 +11,8 @@ icell*
 icons(int data, icell* next)
 {
     icell* cell = hmalloc(sizeof(icell));
+    printf("Got back: %p, size: %zu\n", (void*)cell - sizeof(size_t), *(size_t*)((void*)cell - sizeof(size_t)));
+    freelist_print();
     cell->data = data;
     cell->next = next;
     return cell;

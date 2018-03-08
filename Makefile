@@ -3,19 +3,21 @@
 CFLAGS  := -g -Wall -Werror -std=gnu99
 SRCS    := $(wildcard *.c)
 
-all: tests hmalloc
+all: tests
 
 tests:
 	(cd tests && make)
 
 hmalloc: $(SRCS)
 	gcc $(CFLAGS) -o hmalloc $(SRCS)
-	
-	
 
+# mytest: $(SRCS)
+# 	gcc $(CFLAGS) -o mytest $(SRCS)
+	
 clean:
 	(cd tests && make clean)
 	rm -f valgrind.out stdout.txt stderr.txt *.plist
+	rm -rf *.dSYM
 
 
 # CFLAGS := -g -Wall -Werror -std=gnu99
@@ -44,6 +46,6 @@ clean:
 # 	(cd tools && make clean)
 # 	rm -f tssort data.dat *.plist valgrind.out
 
-.PHONY: clean all tests hmalloc
+.PHONY: clean all tests hmalloc mytest
 
 

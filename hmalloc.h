@@ -12,10 +12,18 @@ typedef struct hm_stats {
     long free_length;
 } hm_stats;
 
+typedef struct freeblock {
+	size_t size;
+	struct freeblock* next;
+} freeblock;
+
 hm_stats* hgetstats();
 void hprintstats();
 
 void* hmalloc(size_t size);
 void hfree(void* item);
+void freelist_print();
+int freelist_sorted();
+void freelist_checkadj();
 
 #endif
