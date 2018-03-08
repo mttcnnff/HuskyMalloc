@@ -22,8 +22,5 @@ void hprintstats();
 
 void* hmalloc(size_t size);
 void hfree(void* item);
-void freelist_print();
-int freelist_sorted();
-void freelist_checkadj();
 
 #endif
